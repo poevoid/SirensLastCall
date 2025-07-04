@@ -1,3 +1,6 @@
+///some changes made in order to reduce flickering from timer conflicts when playing grayscale games
+
+
 /*
    Copyright (C) 2016 Ignacio Vina (@igvina)
 
