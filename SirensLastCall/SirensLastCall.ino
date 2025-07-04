@@ -5,7 +5,7 @@
 #define ABG_IMPLEMENTATION
 #define ABG_SYNC_PARK_ROW
 #define SPRITESU_IMPLEMENTATION
-//define OLED_SH1106  //for arduboy mini, set ABG_REFRESH_HZ TO 95
+//#define OLED_SH1106  //for arduboy mini, set ABG_REFRESH_HZ TO 95
 #define SPRITESU_OVERWRITE
 #define SPRITESU_PLUSMASK
 #define SPRITESU_FX
@@ -28,6 +28,7 @@ void setup() {
 
   arduboy.startGray();
   FX::begin(FX_DATA_PAGE, FX_SAVE_PAGE);
+  arduboy.initRandomSeed();
   drop.mass =0.2;
   force.gravity.x = 0;
   force.gravity.y = 0.1;
@@ -38,8 +39,8 @@ void setup() {
   drop.position.y = 0;
   drop.framecount = 7;
   drop.currentframe = 0;
-  drop.framewait = 1;
-  drop.falling = false;
+  drop.framewait = 5;
+  drop.moving = false;
   drop.acceleration.x = 0;
   drop.acceleration.y = 0.01;
   drop.velocity.x = 0;

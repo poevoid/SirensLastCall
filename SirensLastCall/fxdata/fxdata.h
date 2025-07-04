@@ -6,8 +6,8 @@ using uint24_t = __uint24;
 
 // Initialize FX hardware using  FX::begin(FX_DATA_PAGE); in the setup() function.
 
-constexpr uint16_t FX_DATA_PAGE  = 0xff4d;
-constexpr uint24_t FX_DATA_BYTES = 41690;
+constexpr uint16_t FX_DATA_PAGE  = 0xfe85;
+constexpr uint24_t FX_DATA_BYTES = 92792;
 
 constexpr uint16_t FX_SAVE_PAGE  = 0xfff0;
 constexpr uint24_t FX_SAVE_BYTES = 2;
@@ -16,12 +16,27 @@ constexpr uint24_t abutton = 0x000000;
 constexpr uint24_t background = 0x000302;
 constexpr uint24_t bbutton = 0x001B04;
 constexpr uint24_t buckbaird = 0x001E06;
-constexpr uint24_t dogether = 0x002108;
-constexpr uint24_t dpad = 0x00240A;
-constexpr uint24_t drip = 0x0027CC;
-constexpr uint24_t gameoverscreen = 0x00294E;
-constexpr uint24_t ladyidle = 0x004150;
-constexpr uint24_t ladytalk = 0x004812;
-constexpr uint24_t punklogooutlined = 0x0084D4;
-constexpr uint24_t stuff = 0x009CD6;
-constexpr uint24_t trej = 0x009E58;
+constexpr uint24_t coin = 0x002108;
+constexpr uint24_t creditleft = 0x00222A;
+constexpr uint24_t creditpunkbottom = 0x002E2C;
+constexpr uint24_t creditpunk = 0x00342E;
+constexpr uint24_t cursor = 0x005230;
+constexpr uint24_t dogether = 0x0052F2;
+constexpr uint24_t dpadlr = 0x0055F4;
+constexpr uint24_t dpadupdown = 0x0058F6;
+constexpr uint24_t dpad = 0x005BF8;
+constexpr uint24_t drip = 0x005FBA;
+constexpr uint24_t gameoverscreen = 0x00613C;
+constexpr uint24_t heart = 0x00793E;
+constexpr uint24_t helpfirst = 0x007DC0;
+constexpr uint24_t helpsecond = 0x0095C2;
+constexpr uint24_t helpthird = 0x00ADC4;
+constexpr uint24_t ladyidle = 0x00C5C6;
+constexpr uint24_t ladytalk = 0x00CC88;
+constexpr uint24_t lowerlid = 0x01094A;
+constexpr uint24_t punklogooutlined = 0x0109AC;
+constexpr uint24_t smoke = 0x0121AE;
+constexpr uint24_t stuff = 0x014BB0;
+constexpr uint24_t title = 0x014D32;
+constexpr uint24_t trej = 0x016534;
+constexpr uint24_t upperlid = 0x0169B6;
