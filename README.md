@@ -1,7 +1,8 @@
 # SirensLastCall
 
 ![image](https://github.com/user-attachments/assets/09c39b4f-ffca-4f7e-80ef-c729d80334a8)
-![image](https://github.com/user-attachments/assets/44272f5a-f378-4b48-b855-5f2891c5c0c6)
+![image](https://github.com/user-attachments/assets/f7de921f-f814-42d7-8d7c-85317a28ed3e)
+
 
 
 An arduboy "horror" game of chance with creepy yet sexy overtones and themes. Nothing explicit, just vibes. 
