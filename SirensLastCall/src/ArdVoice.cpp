@@ -1,6 +1,3 @@
-///some changes made in order to reduce flickering from timer conflicts when playing grayscale games
-
-
 /*
    Copyright (C) 2016 Ignacio Vina (@igvina)
 
@@ -21,7 +18,7 @@
 // ArdVoice: version 0.1
 
 #include "ArdVoice.h"
-
+#include <ArduboyFX.h>
 //#define SAMPLES 180
 // 7812,5 ticks/s vs 8000 Hz -> 175,78
 
@@ -58,6 +55,7 @@ ArdVoice::ArdVoice(){};
 void ArdVoice::playVoice(const uint8_t *audio){
   playVoice(audio, 0, 0, 1.0);
 }
+
 
 void ArdVoice::playVoice(const uint8_t *audio, uint16_t startTime, uint16_t endTime, float speed){
 

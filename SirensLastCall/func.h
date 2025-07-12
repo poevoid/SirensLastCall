@@ -2,97 +2,24 @@
 
 #include "vars.h"
 
-// Standard animation - loops continuously
-template<typename T>
-void animateSprite(T& s) {
-  if (s.counter % FRAME(s.framewait) == 0) {
-    s.currentframe = (s.currentframe < s.framecount) ? s.currentframe + 1 : 0;
-  }
-  s.counter++;
-}
 
-// Animation that runs once then resets
+// Combined animation templates
 template<typename T>
-void animateOnce(T& s) {
-  if (s.moving) {
-    if (s.counter % FRAME(s.framewait) == 0) {
-      if (s.currentframe < s.framecount) {
-        s.currentframe++;
-      } else {
-        s.moving = false;
-        s.currentframe = 0;
-      }
-    }
-    s.counter++;
-  }
-}
+void animate(T& s, bool loop = true, bool freeze = false, bool effects = false) {
+  if (s.counter++ % FRAME(s.framewait)) return;
 
-template<typename T>
-void animateThenFreeze(T& structObj, uint8_t T::*cframe, uint8_t T::*framec,
-                       int T::*counter, uint8_t T::*wait, uint24_t T::*sprite,
-                       bool T::*moving) {
-  if (structObj.*counter % (FRAME(structObj.*wait)) == 0) {
-    if (structObj.*cframe < structObj.*framec) {
-      structObj.*cframe += 1;
-    } else {
-      structObj.*moving = false;              // Auto-reset flag
-      structObj.*cframe = structObj.*framec;  // freeze animation
-      //ardvoice.stopVoice();
-      // currentSelection = 1;
-      //eye.currentframe = 1;
-    }
-  }
-  structObj.*counter += 1;
-}
-
-// Specialized animation with side effects (chick-specific)
-template<typename T>
-void animateThenFreeze2(T& s) {
-  if (s.counter % FRAME(s.framewait) == 0) {
-    if (s.currentframe < s.framecount) {
-      s.currentframe++;
-    } else {
-      s.moving = false;
-      s.currentframe = s.framecount;
+  if (s.currentframe < s.framecount) {
+    s.currentframe++;
+  } else {
+    s.moving = false;
+    if (loop) s.currentframe = 0;
+    if (freeze) s.currentframe = s.framecount;
+    if (effects) {
       ardvoice.stopVoice();
       currentSelection = 1;
-      blockInput = false;
     }
   }
-  s.counter++;
 }
-// Specialized animation with side effects (chick-specific)
-template<typename T>
-void animateThenFreeze3(T& s) {
-  if (s.counter % FRAME(s.framewait) == 0) {
-    if (s.currentframe < s.framecount) {
-      s.currentframe++;
-    } else {
-      s.moving = false;
-      s.currentframe = s.framecount;
-      //ardvoice.stopVoice();
-      //currentSelection = 1;
-      //blockInput = false;
-    }
-  }
-  s.counter++;
-}
-// Forward-backward animation (ping-pong)
-template<typename T>
-void animateFWB(T& s) {
-  if (s.counter % FRAME(s.framewait) == 0) {
-    if (s.currentframe == s.framecount) s.inc = false;
-    if (s.currentframe == 0) s.inc = true;
-
-    if (s.inc && s.currentframe < s.framecount) {
-      s.currentframe++;
-    } else if (!s.inc && s.currentframe > 0) {
-      s.currentframe--;
-    }
-  }
-  s.counter++;
-}
-
 
 void shuffleChests() {
   int weight = random(1, 4);
@@ -118,234 +45,195 @@ void shuffleChests() {
     thirdchest.hastreasure = true;
   }
 }
+
+void handleWinThreshold() {
+  if (money >= amountToWin) {
+    startTalking = true;
+    //ardvoice.stopVoice();
+    shuffleChests();
+    resultTimer = 60;
+    screen = Screen::Escape;
+  }
+}
+
 void handleChests() {
-  switch (chestState) {
-    case ChestState::Closed:
-      if (betlives) {
-      }
+  if (!blockInput) {
+    // Simplified handleChests with array-based logic
+    switch (chestState) {
+      case ChestState::Closed:
+        if (arduboy.justPressed(A_BUTTON) && !picked && money >= bet) {
+          picked = true;
+          money -= bet;
+          chestProcessed = false;
 
-
-      if (arduboy.justPressed(A_BUTTON) && !picked && money >= 10) {
-        picked = true;
-        money -= bet;  // Deduct bet immediately
-        chestProcessed = false;
-
-        if (currentSelection == 1) {
-          firstchest.moving = true;
-          firstchest.currentframe = 0;
-          firstchest.counter = 0;
-        } else if (currentSelection == 2) {
-          secondchest.moving = true;
-          secondchest.currentframe = 0;
-          secondchest.counter = 0;
-        } else if (currentSelection == 3) {
-          thirdchest.moving = true;
-          thirdchest.currentframe = 0;
-          thirdchest.counter = 0;
-        }
-        chestState = ChestState::Opening;
-      }
-      if (arduboy.justPressed(A_BUTTON) && !picked && betlives) {
-        picked = true;
-        // money -= bet;  // Deduct bet immediately
-        lives -= 1;
-        chestProcessed = false;
-
-        if (currentSelection == 1) {
-          firstchest.moving = true;
-          firstchest.currentframe = 0;
-          firstchest.counter = 0;
-        } else if (currentSelection == 2) {
-          secondchest.moving = true;
-          secondchest.currentframe = 0;
-          secondchest.counter = 0;
-        } else if (currentSelection == 3) {
-          thirdchest.moving = true;
-          thirdchest.currentframe = 0;
-          thirdchest.counter = 0;
-        }
-        chestState = ChestState::Opening;
-      }
-      break;
-
-    case ChestState::Opening:
-      if (currentSelection == 1 && firstchest.moving) {
-        animateThenFreeze(firstchest, &Chest::currentframe, &Chest::framecount,
-                          &Chest::counter, &Chest::framewait, &Chest::sprite,
-                          &Chest::moving);
-        if (!firstchest.moving) {
-          if (firstchest.hastreasure) {
-            prize.x = firstchest.x + 4;
-            prize.y = firstchest.y;
-            prize.sprite = coin;
-            prize.framecount = 5;
-            prize.framewait = 2;
-          } else {
-            prize.x = firstchest.x - 8;
-            prize.y = firstchest.y - 24;
-            prize.sprite = smoke;
-            prize.framecount = 13;
-            prize.framewait = 1;
+          if (currentSelection == 1) {
+            firstchest.moving = true;
+            firstchest.currentframe = 0;
+            firstchest.counter = 0;
+          } else if (currentSelection == 2) {
+            secondchest.moving = true;
+            secondchest.currentframe = 0;
+            secondchest.counter = 0;
+          } else if (currentSelection == 3) {
+            thirdchest.moving = true;
+            thirdchest.currentframe = 0;
+            thirdchest.counter = 0;
           }
-          chestState = ChestState::Open;
-          resultTimer = 60;  // Reset timer
+          chestState = ChestState::Opening;
         }
-      }
-      // Repeat for other chests...
-      if (currentSelection == 2 && secondchest.moving) {
-        animateThenFreeze(secondchest, &Chest::currentframe, &Chest::framecount,
-                          &Chest::counter, &Chest::framewait, &Chest::sprite,
-                          &Chest::moving);
-        if (!secondchest.moving) {
-          if (secondchest.hastreasure) {
-            prize.x = secondchest.x + 4;
-            prize.y = secondchest.y;
-            prize.sprite = coin;
-            prize.framecount = 5;
-            prize.framewait = 2;
-          } else {
-            prize.x = secondchest.x - 8;
-            prize.y = secondchest.y - 24;
-            prize.sprite = smoke;
-            prize.framecount = 13;
-            prize.framewait = 1;
+        if (arduboy.justPressed(A_BUTTON) && !picked && betlives) {
+          picked = true;
+          lives -= 1;
+          chestProcessed = false;
+
+          if (currentSelection == 1) {
+            firstchest.moving = true;
+            firstchest.currentframe = 0;
+            firstchest.counter = 0;
+          } else if (currentSelection == 2) {
+            secondchest.moving = true;
+            secondchest.currentframe = 0;
+            secondchest.counter = 0;
+          } else if (currentSelection == 3) {
+            thirdchest.moving = true;
+            thirdchest.currentframe = 0;
+            thirdchest.counter = 0;
           }
-          chestState = ChestState::Open;
-          resultTimer = 60;  // Reset timer
+          chestState = ChestState::Opening;
         }
-      }
+        break;
 
-      if (currentSelection == 3 && thirdchest.moving) {
-        animateThenFreeze(thirdchest, &Chest::currentframe, &Chest::framecount,
-                          &Chest::counter, &Chest::framewait, &Chest::sprite,
-                          &Chest::moving);
-        if (!thirdchest.moving) {
-          if (thirdchest.hastreasure) {
-            prize.x = thirdchest.x + 4;
-            prize.y = thirdchest.y;
-            prize.sprite = coin;
-            prize.framecount = 5;
-            prize.framewait = 2;
-          } else {
-            prize.x = thirdchest.x - 8;
-            prize.y = thirdchest.y - 24;
-            prize.sprite = smoke;
-            prize.framecount = 13;
-            prize.framewait = 1;
+      case ChestState::Opening:
+        if (currentSelection == 1 && firstchest.moving) {
+          animate(firstchest, false, true, false);
+          if (!firstchest.moving) {
+            if (firstchest.hastreasure) {
+              prize.x = firstchest.x + 4;
+              prize.y = firstchest.y;
+              prize.sprite = coin;
+              prize.framecount = 5;
+              prize.framewait = 2;
+            } else {
+              prize.x = firstchest.x - 8;
+              prize.y = firstchest.y - 24;
+              prize.sprite = smoke;
+              prize.framecount = 13;
+              prize.framewait = 1;
+            }
+            chestState = ChestState::Open;
+            resultTimer = 30;
           }
-
-
-          chestState = ChestState::Open;
-          resultTimer = 60;  // Reset timer
         }
-      }
-      break;
-
-    case ChestState::Open:
-      if (!chestProcessed) {
-        chestProcessed = true;
-        startPrize = true;
-        //bet = 10;
-
-        if (!betlives && currentSelection == 1 && firstchest.hastreasure) {
-          money += (2 * bet);  // Win: bet back + prize
-
-          //resultTimer = 120;
-
-          //animateSprite(life);
-        } else if (!betlives && currentSelection == 1 && !firstchest.hastreasure) {
-
-          //resultTimer = 120;
-          // animateOnce(curse);
-        } else if (betlives && currentSelection == 1 && firstchest.hastreasure) {
-          money += 50;  // Win: bet back + prize
-                        //resultTimer = 120;
-          lives = 1;
-          //animateSprite(life);
-        } else if (betlives && currentSelection == 1 && !firstchest.hastreasure) {
-          //resultTimer = 120;
-          // animateOnce(curse);
+        if (currentSelection == 2 && secondchest.moving) {
+          animate(secondchest, false, true, false);
+          if (!secondchest.moving) {
+            if (secondchest.hastreasure) {
+              prize.x = secondchest.x + 4;
+              prize.y = secondchest.y;
+              prize.sprite = coin;
+              prize.framecount = 5;
+              prize.framewait = 2;
+            } else {
+              prize.x = secondchest.x - 8;
+              prize.y = secondchest.y - 24;
+              prize.sprite = smoke;
+              prize.framecount = 13;
+              prize.framewait = 1;
+            }
+            chestState = ChestState::Open;
+            resultTimer = 30;
+          }
         }
-
-
-        // Add checks for other chests...
-        if (!betlives && currentSelection == 2 && secondchest.hastreasure) {
-          money += (2 * bet);  // Win: bet back + prize
-          //resultTimer = 120;
-        } else if (!betlives && currentSelection == 2 && !secondchest.hastreasure) {
-          //resultTimer = 120;
-          //animateOnce(curse);
-        } else if (betlives && currentSelection == 2 && secondchest.hastreasure) {
-          money += 50;  // Win: bet back + prize
-          lives = 1;
-
-          //resultTimer = 120;
-        } else if (betlives && currentSelection == 2 && !secondchest.hastreasure) {
-          //resultTimer = 120;
-          //animateOnce(curse);
+        if (currentSelection == 3 && thirdchest.moving) {
+          animate(thirdchest, false, true, false);
+          if (!thirdchest.moving) {
+            if (thirdchest.hastreasure) {
+              prize.x = thirdchest.x + 4;
+              prize.y = thirdchest.y;
+              prize.sprite = coin;
+              prize.framecount = 5;
+              prize.framewait = 2;
+            } else {
+              prize.x = thirdchest.x - 8;
+              prize.y = thirdchest.y - 24;
+              prize.sprite = smoke;
+              prize.framecount = 13;
+              prize.framewait = 1;
+            }
+            chestState = ChestState::Open;
+            resultTimer = 30;
+          }
         }
+        break;
 
-        if (!betlives && currentSelection == 3 && thirdchest.hastreasure) {
-          money += (2 * bet);  // Win: bet back + prize
-          //resultTimer = 120;
-        } else if (!betlives && currentSelection == 3 && !thirdchest.hastreasure) {
-          //resultTimer = 120;
-          //animateOnce(curse);
+
+      case ChestState::Open:
+        if (!chestProcessed) {
+          chestProcessed = true;
+          startPrize = true;
+          if (!betlives && currentSelection == 1 && firstchest.hastreasure) {
+            money += (2 * bet);  // Win: bet back + prize
+          } else if (betlives && currentSelection == 1 && firstchest.hastreasure) {
+            money += 50;  // Win: bet back + prize
+            lives = 1;
+          }
+          if (!betlives && currentSelection == 2 && secondchest.hastreasure) {
+            money += (2 * bet);  // Win: bet back + prize
+          } else if (betlives && currentSelection == 2 && secondchest.hastreasure) {
+            money += 50;  // Win: bet back + prize
+            lives = 1;
+          }
+          if (!betlives && currentSelection == 3 && thirdchest.hastreasure) {
+            money += (2 * bet);  // Win: bet back + prize
+          } else if (betlives && currentSelection == 3 && thirdchest.hastreasure) {
+            money += 50;  // Win: bet back + prize
+            lives = 1;
+            //resultTimer = 120;
+          }
+          if (bet > money) {
+            bet = 10;
+          }
         }
-        if (betlives && currentSelection == 3 && thirdchest.hastreasure) {
-          money += 50;  // Win: bet back + prize
-          lives = 1;
-          //resultTimer = 120;
-        } else if (betlives && currentSelection == 3 && !thirdchest.hastreasure) {
-          //resultTimer = 120;
-          //animateOnce(curse);
-        }
-        if (bet > money) {
-          bet = 10;
-        }
-      }
-
-      if (resultTimer > 0) {
-        if (startPrize) {
-
-          prize.moving = true;
-          prize.currentframe = 0;
-          prize.counter = 0;
-          startPrize = false;
-        }
-        if (prize.moving) {
-          animateThenFreeze3(prize);
-        }
-
-        resultTimer--;
-      } else {
-
-
-        if (money == 0 && lives == 0) {
-          gameOver = true;
-        } else if (money == 0) {
-          betlives = true;
+        if (resultTimer > 0) {
+          if (startPrize) {
+            prize.moving = true;
+            prize.currentframe = 0;
+            prize.counter = 0;
+            startPrize = false;
+          }
+          if (prize.moving) {
+            animate(prize, false, false, false);
+          }
+          resultTimer--;
         } else {
-          betlives = false;
+          if (money == 0 && lives == 0) {
+            gameOver = true;
+          } else if (money == 0) {
+            betlives = true;
+          } else {
+            betlives = false;
+          }
+          chestState = ChestState::Resetting;
         }
-        chestState = ChestState::Resetting;
-      }
-      break;
+        break;
 
-    case ChestState::Resetting:
-      // Reset all chests to closed state
-      firstchest.moving = false;
-      firstchest.currentframe = 0;
-      secondchest.moving = false;
-      secondchest.currentframe = 0;
-      thirdchest.moving = false;
-      thirdchest.currentframe = 0;
+      case ChestState::Resetting:
 
-      shuffleChests();
-      picked = false;
-      chestState = ChestState::Closed;
-      //chick.moving = true;  // Make chick talk again
-      break;
+        // Reset all chests to closed state
+        firstchest.moving = false;
+        firstchest.currentframe = 0;
+        secondchest.moving = false;
+        secondchest.currentframe = 0;
+        thirdchest.moving = false;
+        thirdchest.currentframe = 0;
+
+        shuffleChests();
+        picked = false;
+        chestState = ChestState::Closed;
+
+
+        break;
+    }
   }
 }
 void drawPrizes() {
@@ -358,10 +246,25 @@ void resetGame() {
   money = 100;
   startTalking = true;
   shuffleChests();
+  firstchest.currentframe = 0;
+
+  secondchest.currentframe = 0;
+
+  thirdchest.currentframe = 0;
+
   currentSelection = 0;
   gameOver = false;
   betlives = false;
   lives = 1;
+  text.sprite = ctpaw;
+  text.framewait = chick.framewait;
+  text.currentframe = 0;
+  frog.x = 0;
+  pad.x = 4;
+  chick.x = 80;
+  firstchest.y = 42;
+  secondchest.y = 42;
+  thirdchest.y = 42;
 }
 void timeBlinking() {
   if (blinkcounter > 0) {
@@ -381,7 +284,7 @@ void blinky() {
     startBlinking = false;
   }
   if (punk.moving) {
-    animateOnce(punk);
+    animate(punk, true, false, false);
   }
 }
 void handleBlinking() {
@@ -446,9 +349,9 @@ void handleDrip() {
     //drop.applyForce(force.gravity);
     drop.update();
   }
-  if (drop.position.y > 1504 /*adjust for crude timing, higher the number, the longer the reset*/) {
-    drop.position.y = 0;
-    drop.velocity.y = 0;
+  if (drop.y > 1504 /*adjust for crude timing, higher the number, the longer the reset*/) {
+    drop.y = 0;
+    drop.vy = 0;
     startDripping = true;
   }
   if (startDripping) {
@@ -460,35 +363,79 @@ void handleDrip() {
     startDripping = false;
   }
   if (drop.moving) {
-    animateThenFreeze(drop, &Drops::currentframe, &Drops::framecount,
-                      &Drops::counter, &Drops::framewait, &Drops::sprite,
-                      &Drops::moving);
+    animate(drop, false, true, false);
   }
-
-
-
-  ///
 }
-void handleTalking() {
 
+void handleEscapeBar() {
+  if (escaperleft) {
+    escaper -= 2;
+  }
+  if (escaperright) {
+    escaper += 2;
+  }
+  if (escaperright && escaper >= 103) {
+    escaperright = false;
+    escaperleft = true;
+  }
+  if (escaperleft && escaper <= 25) {
+    escaperright = true;
+    escaperleft = false;
+  }
+  if (arduboy.justPressed(A_BUTTON)) {
+    if (escaper > 55 && escaper < 70) {
+      text.sprite = endtext;
+      text.framewait = Bbutton.framewait;
+      resultTimer = 200;
+      ardvoice.stopVoice();
+      screen = Screen::Win;
+    } else {
+      screen = Screen::Lose;
+    }
+  }
+}
+
+void handleEscapeTalking() {
   if (startTalking) {
     blockInput = true;
     chick.moving = true;
     chick.currentframe = 0;
     chick.counter = 0;
-
-    ardvoice.playVoice(voice, 0, 2790, 0.6);
     startTalking = false;
   }
   if (chick.moving) {
-    animateThenFreeze2(chick);
+    blockInput = true;
+    animate(chick, false, true, false);
+  } else {
+    chick.currentframe = 0;
+    blockInput = false;
   }
 }
-void handleSelection() {
-  eye.currentframe = currentSelection;
-  if (currentSelection == 0) {
-    //chick.moving = true;
+void handleTalking() {
+
+  if (startTalking && money < amountToWin) {
+    blockInput = true;
+    chick.moving = true;
+    chick.currentframe = 0;
+    chick.counter = 0;
+    text.moving = true;
+    text.currentframe = 0;
+    text.counter = 0;
+    ardvoice.playVoice(voice, 0, 2677, 0.6);
+    startTalking = false;
   }
+  if (chick.moving) {
+    blockInput = true;
+    animate(chick, false, true, true);
+
+    animate(text, false, true, false);
+  } else {
+    text.currentframe = 0;
+    blockInput = false;
+  }
+}
+void handleEye() {
+  eye.currentframe = currentSelection;
 }
 
 void playerInput() {
@@ -545,7 +492,11 @@ void update() {
       break;
 
     case Screen::Title:
-      animateSprite(menuCursor);
+      if (!ardvoice.isVoicePlaying()) {
+        ardvoice.playVoice(audio_q1);
+      }
+      animate(menuCursor, true, false, false);
+
       //T& structObj, uint8_t T::*cframe, uint8_t T::*framec, int T::*counter, uint8_t T::*wait
       switch (menu) {
         case MenuSelect::Play:
@@ -555,9 +506,9 @@ void update() {
             menu = MenuSelect::Help;
           }
           if (arduboy.justPressed(A_BUTTON)) {
-            screen = Screen::Game;
-            startTalking = true;
-            shuffleChests();
+            screen = Screen::Mode;
+            //startTalking = true;
+            //shuffleChests();
           }
           break;
 
@@ -589,65 +540,16 @@ void update() {
       break;
 
 
-    case Screen::Game:
-      if (!blockInput) {
-        playerInput();
-      }
-
-      animateSprite(menuCursor);
-      handleSelection();
-      handleChests();
-      //handleMoney();
-      timeBlinking();
-      handleBlinking();
-      handleTalking();
-      handleDrip();
-      if (betlives) {
-        animateSprite(life);
-      }
-      if (gameOver) {
-        screen = Screen::Lose;
-      }
-
-      break;
-
-    case Screen::Lose:
-
-      if (tryAgain) {
-        Cursor.x = 25;
-        Cursor.y = 26;
-        if (arduboy.justPressed(DOWN_BUTTON)) {
-          tryAgain = false;
-        }
-        if (arduboy.justPressed(A_BUTTON)) {
-          resetGame();
-          screen = Screen::Game;
-        }
-      } else {
-        Cursor.x = 25;
-        Cursor.y = 37;
-        if (arduboy.justPressed(UP_BUTTON)) {
-          tryAgain = true;
-        }
-        if (arduboy.justPressed(A_BUTTON)) {
-          resetGame();
-          screen = Screen::Title;
-        }
-      }
-
-
-
-      break;
     case Screen::Help:
 
       switch (helpIndex) {
         case 0:
-          animateSprite(upad);
-          animateSprite(lrpad);
-          animateSprite(menuCursor);
-          animateSprite(Abutton);
-          animateSprite(Bbutton);
-          if (arduboy.justPressed(A_BUTTON)) {
+          animate(upad, true, false, false);
+          animate(lrpad, true, false, false);
+          animate(menuCursor, true, false, false);
+          //animate(Abutton, true, false, false);
+          animate(Bbutton, true, false, false);
+          if (arduboy.justPressed(A_BUTTON) || arduboy.justPressed(RIGHT_BUTTON)) {
             helpscreens.sprite = helpsecond;
             helpIndex = 1;
           }
@@ -658,17 +560,17 @@ void update() {
             // pad.y = 39;
             screen = Screen::Title;
           }
-          
+
           break;
 
         case 1:
-          animateSprite(Abutton);
-          animateSprite(Bbutton);
-          if (arduboy.justPressed(A_BUTTON)) {
+          //animate(Abutton, true, false, false);
+          animate(Bbutton, true, false, false);
+          if (arduboy.justPressed(A_BUTTON) || arduboy.justPressed(RIGHT_BUTTON)) {
             helpscreens.sprite = helpthird;
             helpIndex = 2;
           }
-          if (arduboy.justPressed(B_BUTTON)) {
+          if (arduboy.justPressed(B_BUTTON) || arduboy.justPressed(LEFT_BUTTON)) {
             helpscreens.sprite = helpfirst;
             helpIndex = 0;
           }
@@ -676,10 +578,10 @@ void update() {
 
         case 2:
 
-          animateSprite(menuCursor);
-          animateSprite(life);
-          animateSprite(Abutton);
-          animateSprite(Bbutton);
+          animate(menuCursor, true, false, false);
+          animate(life, true, false, false);
+          //animate(Abutton, true, false, false);
+          animate(Bbutton, true, false, false);
           if (arduboy.justPressed(A_BUTTON)) {
             helpscreens.sprite = helpfirst;
             helpIndex = 0;
@@ -687,24 +589,194 @@ void update() {
             // pad.y = 39;
             screen = Screen::Title;
           }
-          if (arduboy.justPressed(B_BUTTON)) {
+          if (arduboy.justPressed(B_BUTTON) || arduboy.justPressed(LEFT_BUTTON)) {
             helpscreens.sprite = helpsecond;
             helpIndex = 1;
           }
 
           break;
       }
+      break;
+
+    case Screen::Credits:
+      timeBlinking();
+      blinky();
+      animate(Abutton, true, false, false);
+      if (arduboy.justPressed(A_BUTTON) || arduboy.justPressed(B_BUTTON)) {
+        screen = Screen::Title;
+      }
+      break;
+
+
+    case Screen::Mode:
+      if (arduboy.justPressed(A_BUTTON)) {
+        startTalking = true;
+        shuffleChests();
+        screen = Screen::Game;
+        Cursor.x = 21;
+        Cursor.y = 29;
+      }
+      if (arduboy.justPressed(B_BUTTON)) {
+
+        screen = Screen::Title;
+      }
+
+      switch (currentMode) {
+
+        case ModeSelect::Easy:
+          Cursor.x = 10;
+          Cursor.y = 0;
+          amountToWin = 150;
+          if (arduboy.justPressed(DOWN_BUTTON)) {
+            currentMode = ModeSelect::Normal;
+          }
+          break;
+
+        case ModeSelect::Normal:
+          Cursor.x = 10;
+          Cursor.y = 24;
+          amountToWin = 300;
+          if (arduboy.justPressed(UP_BUTTON)) {
+            currentMode = ModeSelect::Easy;
+          }
+          if (arduboy.justPressed(DOWN_BUTTON)) {
+            currentMode = ModeSelect::Hard;
+          }
+          break;
+
+
+        case ModeSelect::Hard:
+          Cursor.x = 10;
+          Cursor.y = 44;
+          amountToWin = 1000;
+          if (arduboy.justPressed(UP_BUTTON)) {
+            currentMode = ModeSelect::Normal;
+          }
+          break;
+      }
+      break;
+
+    case Screen::Game:
+      if (!blockInput) {
+        playerInput();
+        if (!ardvoice.isVoicePlaying()) {
+          ardvoice.playVoice(audio_q1);
+        }
+      }
+
+      animate(frog, true, false, false);
+      animate(notes, true, false, false);
+      animate(menuCursor, true, false, false);
+      handleEye();
+      handleWinThreshold();
+      handleChests();
+      timeBlinking();
+      handleBlinking();
+      handleTalking();
+      handleDrip();
+      if (betlives) {
+        animate(life, true, false, false);
+      }
+      if (gameOver) {
+        ardvoice.stopVoice();
+        screen = Screen::Lose;
+      }
+
+      break;
+
+    case Screen::Lose:
+      if (!ardvoice.isVoicePlaying()) {
+        ardvoice.playVoice(doop);
+      }
+      if (tryAgain) {
+        Cursor.x = 25;
+        Cursor.y = 26;
+        if (arduboy.justPressed(DOWN_BUTTON)) {
+          tryAgain = false;
+        }
+        if (arduboy.justPressed(A_BUTTON)) {
+          resetGame();
+
+          ardvoice.stopVoice();
+          screen = Screen::Game;
+        }
+      } else {
+        Cursor.x = 25;
+        Cursor.y = 37;
+        if (arduboy.justPressed(UP_BUTTON)) {
+          tryAgain = true;
+        }
+        if (arduboy.justPressed(A_BUTTON)) {
+          resetGame();
+
+          ardvoice.stopVoice();
+          screen = Screen::Title;
+        }
+      }
 
 
 
       break;
-    case Screen::Credits:
-      timeBlinking();
-      blinky();
-      animateSprite(Abutton);
-      if (arduboy.justPressed(A_BUTTON) || arduboy.justPressed(B_BUTTON)) {
-        screen = Screen::Title;
+    case Screen::Win:
+      ardvoice.stopVoice();
+      if (resultTimer > 0) {
+              resultTimer--;
+      } else {
+        if (secondphase > 0) {
+          
+          secondphase--;
+        } else {
+          
+          if (thirdphase > 0) {
+            
+            thirdphase--;
+          } else {
+            resetGame();
+            screen = Screen::Credits;
+          }
+        }
       }
+
+      animate(text, false, true, false);
+
+      break;
+
+    case Screen::Escape:
+      if (resultTimer > 0) {
+
+
+        if (firstchest.y < HEIGHT) {
+          firstchest.y++;
+        }
+        if (secondchest.y < HEIGHT) {
+          secondchest.y++;
+        }
+        if (thirdchest.y < HEIGHT) {
+          thirdchest.y++;
+        }
+        if (pad.x > -16) {
+
+          pad.x--;
+        }
+
+        if (frog.x > -16) {
+
+          frog.x--;
+        }
+        if (chick.x > eye.x - 8) {
+          --chick.x;
+        }
+        handleEscapeTalking();
+        resultTimer--;
+      } else {
+        if (!blockInput) {
+
+          handleEscapeBar();
+          //chick.currentframe=0;
+        }
+      }
+
+
       break;
   }
 }
@@ -727,15 +799,17 @@ void render() {
 
       break;
 
+    case Screen::Mode:
+
+      SpritesU::drawPlusMaskFX(32, 0, selectscreen, FRAME(0));
+
+      SpritesU::drawPlusMaskFX(Cursor.x, Cursor.y, Cursor.sprite, FRAME(Cursor.currentframe));
+
+      break;
 
 
     case Screen::Game:
 
-      if (currentPlane <= 2) {
-#ifndef OLED_SH1106
-        //arduboy.fillScreen(WHITE);
-#endif
-      }
       SpritesU::drawPlusMaskFX(eye.x, eye.y, eye.sprite, FRAME(eye.currentframe));
       SpritesU::drawPlusMaskFX(lowlid.x, lowlid.y, lowlid.sprite, FRAME(lowlid.currentframe));
 
@@ -749,17 +823,23 @@ void render() {
       SpritesU::drawPlusMaskFX(chick.x, chick.y, chick.sprite, FRAME(chick.currentframe));
       SpritesU::drawPlusMaskFX(128 - 16, 60 - 16, stuff, FRAME(1));  //skull
       SpritesU::drawPlusMaskFX(128 - 36, 60 - 16, stuff, FRAME(0));  //mushroom
-      SpritesU::drawPlusMaskFX(drop.position.x, drop.position.y, drop.sprite, FRAME(drop.currentframe));
+      SpritesU::drawPlusMaskFX(drop.x, drop.y, drop.sprite, FRAME(drop.currentframe));
 
 
 
+      SpritesU::drawPlusMaskFX(frog.x, frog.y, frog.sprite, FRAME(frog.currentframe));
+
+      SpritesU::drawPlusMaskFX(notes.x, notes.y, notes.sprite, FRAME(notes.currentframe));
       SpritesU::drawPlusMaskFX(pad.x, pad.y, pad.sprite, FRAME(pad.currentframe));
       //SpritesU::drawPlusMaskFX(Bbutton.x, Bbutton.y, Bbutton.sprite, FRAME(Bbutton.currentframe));
       SpritesU::drawPlusMaskFX(firstchest.x, firstchest.y, firstchest.sprite, FRAME(firstchest.currentframe));
       SpritesU::drawPlusMaskFX(secondchest.x, secondchest.y, secondchest.sprite, FRAME(secondchest.currentframe));
       SpritesU::drawPlusMaskFX(thirdchest.x, thirdchest.y, thirdchest.sprite, FRAME(thirdchest.currentframe));
       drawPrizes();
+      if (text.moving) {
 
+        SpritesU::drawPlusMaskFX(text.x, text.y, text.sprite, FRAME(text.currentframe));
+      }
 
       arduboy.setCursor(0, 0);
       arduboy.print("Bet:");
@@ -785,6 +865,84 @@ void render() {
 
       break;
 
+    case Screen::Escape:
+
+
+      // SpritesU::drawPlusMaskFX(eye.x, eye.y, eye.sprite, FRAME(eye.currentframe));
+      //SpritesU::drawPlusMaskFX(lowlid.x, lowlid.y, lowlid.sprite, FRAME(lowlid.currentframe));
+
+
+      //SpritesU::drawPlusMaskFX(uplid.x, uplid.y, uplid.sprite, FRAME(uplid.currentframe));
+
+
+      SpritesU::drawPlusMaskFX(0, 0, background, FRAME(0));
+      SpritesU::drawPlusMaskFX(64, 0, background, FRAME(1));
+
+      SpritesU::drawPlusMaskFX(128 - 16, 60 - 16, stuff, FRAME(1));  //skull
+      SpritesU::drawPlusMaskFX(128 - 36, 60 - 16, stuff, FRAME(0));  //mushroom
+                                                                     // SpritesU::drawPlusMaskFX(drop.position.x, drop.position.y, drop.sprite, FRAME(drop.currentframe));
+
+
+
+      SpritesU::drawPlusMaskFX(chick.x, chick.y, chick.sprite, FRAME(chick.currentframe));
+
+      //SpritesU::drawPlusMaskFX(notes.x, notes.y, notes.sprite, FRAME(notes.currentframe));
+      //SpritesU::drawPlusMaskFX(Bbutton.x, Bbutton.y, Bbutton.sprite, FRAME(Bbutton.currentframe));
+
+      if (firstchest.y < HEIGHT) {
+        SpritesU::drawPlusMaskFX(firstchest.x, firstchest.y, firstchest.sprite, FRAME(firstchest.currentframe));
+      }
+      if (secondchest.y < HEIGHT) {
+        SpritesU::drawPlusMaskFX(secondchest.x, secondchest.y, secondchest.sprite, FRAME(secondchest.currentframe));
+      }
+      if (thirdchest.y < HEIGHT) {
+        SpritesU::drawPlusMaskFX(thirdchest.x, thirdchest.y, thirdchest.sprite, FRAME(thirdchest.currentframe));
+      }
+      if (pad.x > -16) {
+        SpritesU::drawPlusMaskFX(pad.x, pad.y, pad.sprite, FRAME(pad.currentframe));
+      }
+
+      if (frog.x > -16) {
+        SpritesU::drawPlusMaskFX(frog.x, frog.y, frog.sprite, FRAME(frog.currentframe));
+      }
+      if (!blockInput) {
+        SpritesU::fillRect_i8(25, 56, 78, 8, arduboy.color(BLACK));
+
+        SpritesU::fillRect_i8(55, 56, 15, 8, arduboy.color(DARK_GRAY));
+        SpritesU::fillRect_i8(escaper, 56, 1, 8, arduboy.color(WHITE));
+
+      } if (resultTimer>0){
+        SpritesU::drawPlusMaskFX(text.x, 40, easyq, FRAME(0));
+      }
+
+
+      break;
+    case Screen::Win:
+      if (resultTimer > 0) {
+        SpritesU::drawPlusMaskFX(0, 0, tunnel, FRAME(0));
+        SpritesU::drawPlusMaskFX(64, 0, tunnel, FRAME(1));
+        SpritesU::drawPlusMaskFX(text.x, text.y, text.sprite, FRAME(text.currentframe));
+        //resultTimer--;
+      } else {
+        if (secondphase > 0) {
+          SpritesU::drawPlusMaskFX(0, 0, tunneltwo, FRAME(0));
+          SpritesU::drawPlusMaskFX(64, 0, tunneltwo, FRAME(1));
+          //secondphase--;
+        } else {
+          
+          if (thirdphase > 0) {
+            SpritesU::drawPlusMaskFX(0, 0, tunnelthree, FRAME(0));
+            SpritesU::drawPlusMaskFX(64, 0, tunnelthree, FRAME(1));
+            //thirdphase--;
+          } else {
+           // resetGame();
+            //screen = Screen::Credits;
+          }
+        }
+      }
+
+
+      break;
     case Screen::Lose:
       SpritesU::drawPlusMaskFX(0, 0, gameoverscreen, FRAME(0));
       SpritesU::drawPlusMaskFX(64, 0, gameoverscreen, FRAME(1));
@@ -814,7 +972,7 @@ void render() {
           SpritesU::drawPlusMaskFX(lrpad.x, lrpad.y, lrpad.sprite, FRAME(lrpad.currentframe));
           SpritesU::drawPlusMaskFX(92, 23, menuCursor.sprite, FRAME(menuCursor.currentframe));
           SpritesU::drawPlusMaskFX(38, 38, menuCursor.sprite, FRAME(menuCursor.currentframe));
-          SpritesU::drawPlusMaskFX(109, 43, Abutton.sprite, FRAME(Abutton.currentframe));
+          SpritesU::drawPlusMaskFX(109, 43, Abutton.sprite, FRAME(Bbutton.currentframe));
           SpritesU::drawPlusMaskFX(Bbutton.x, Bbutton.y, Bbutton.sprite, FRAME(Bbutton.currentframe));
 
           break;
@@ -822,7 +980,7 @@ void render() {
         case 1:
           SpritesU::drawPlusMaskFX(0, helpscreens.y, helpscreens.sprite, FRAME(0));
           SpritesU::drawPlusMaskFX(64, helpscreens.y, helpscreens.sprite, FRAME(1));
-          SpritesU::drawPlusMaskFX(109, 43, Abutton.sprite, FRAME(Abutton.currentframe));
+          SpritesU::drawPlusMaskFX(109, 43, Abutton.sprite, FRAME(Bbutton.currentframe));
           SpritesU::drawPlusMaskFX(Bbutton.x, Bbutton.y, Bbutton.sprite, FRAME(Bbutton.currentframe));
 
 
@@ -831,7 +989,7 @@ void render() {
         case 2:
           SpritesU::drawPlusMaskFX(0, helpscreens.y, helpscreens.sprite, FRAME(0));
           SpritesU::drawPlusMaskFX(64, helpscreens.y, helpscreens.sprite, FRAME(1));
-          SpritesU::drawPlusMaskFX(109, 43, Abutton.sprite, FRAME(Abutton.currentframe));
+          SpritesU::drawPlusMaskFX(109, 43, Abutton.sprite, FRAME(Bbutton.currentframe));
           SpritesU::drawPlusMaskFX(128 - 14, 16, life.sprite, FRAME(life.currentframe));
           SpritesU::drawPlusMaskFX(72, 1, menuCursor.sprite, FRAME(menuCursor.currentframe));
           SpritesU::drawPlusMaskFX(94, 31, menuCursor.sprite, FRAME(menuCursor.currentframe));

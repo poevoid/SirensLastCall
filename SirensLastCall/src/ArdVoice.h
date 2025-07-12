@@ -20,7 +20,7 @@
 #define ARDVOICE_H
 
 #include <Arduino.h>
-
+#include <ArduboyFX.h>
 #define PIN_SPEAKER_1 5  /**< The pin number of the first lead of the speaker */
 #ifndef AB_ALTERNATE_WIRING
   #define PIN_SPEAKER_2 13 /**< The pin number of the second lead of the speaker */
